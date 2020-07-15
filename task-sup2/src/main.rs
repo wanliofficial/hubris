@@ -40,5 +40,7 @@ fn square(msg_info: RecvMessage, message: &[u8]) {
     // overflow? what's overflow?
     let result = i * i;
 
-    sys_reply(msg_info.sender, 0, &result.to_le_bytes());
+    sys_borrow_write(msg_info.sender, 0, 0, &result.to_le_bytes());
+
+    sys_reply(msg_info.sender, 0, &[]);
 }
