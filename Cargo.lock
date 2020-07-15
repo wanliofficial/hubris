@@ -880,6 +880,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "task-sup"
+version = "0.1.0"
+dependencies = [
+ "cortex-m-semihosting",
+ "lpc55-pac",
+ "userlib",
+ "zerocopy",
+]
+
+[[package]]
+name = "task-sup2"
+version = "0.1.0"
+dependencies = [
+ "cortex-m-semihosting",
+ "lpc55-pac",
+ "userlib",
+ "zerocopy",
+]
+
+[[package]]
 name = "task-template"
 version = "0.1.0"
 dependencies = [
