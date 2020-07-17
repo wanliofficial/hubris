@@ -1,4 +1,4 @@
-target extended-remote :2331
+target extended-remote :3333
 
 # Display the pc instruction on break
 display /i $pc
@@ -14,9 +14,9 @@ set backtrace limit 32
 
 load
 monitor reset
-monitor semihosting enable
+# monitor semihosting enable
 # Send the monitor output to gdb
-monitor semihosting IOClient 3
+# monitor semihosting IOClient 3
 
 # The loading does not seem to initialize this properly
 # Make sure these are 0x0 for now (double check this later)
