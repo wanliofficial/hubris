@@ -24,20 +24,20 @@ fn main() -> ! {
 
     let wwdt = unsafe { &*device::WWDT::ptr() };
 
-    let wdtof = wwdt.mod_.read().wdtof().bits();
-    hprintln!("wdtof: {}", wdtof).ok();
-    hprintln!("resetting wdtof to zero").ok();
-    wwdt.mod_.write(|w| w.wdtof().bit(false));
-    let wdtof = wwdt.mod_.read().wdtof().bits();
-    hprintln!("wdtof: {}", wdtof).ok();
 
     syscon.configure_wwdt(Peripheral::Wwdt);
 
     //syscon.enter_reset(Peripheral::Wwdt);
     syscon.leave_reset(Peripheral::Wwdt);
 
+    let wdtof = wwdt.mod_.read().wdtof().bits();
+    hprintln!("wdtof: {}", wdtof).ok();
+
+    // reset wdtof to zero so that if it's one on next boot, we know it's the wwdt that did it
+    wwdt.mod_.write(|w| w.wdtof().bit(false));
+
     // tc is the "timer constant," aka, where we start counting down from. It's 24-bit.
-    wwdt.tc.write(|w| unsafe { w.bits(0xFF_FFFF) });
+    wwdt.tc.write(|w| unsafe { w.bits(0x00_3FFF) });
 
     // enable, allow it to reset the board, 
     wwdt.mod_.write(|w| 
@@ -46,15 +46,19 @@ fn main() -> ! {
             .wdint().set_bit()
     );
 
+    /* reset value is already 0xFF_FFFF
     // set windowing to max, since we don't intend to use it
     wwdt.window.write(|w| unsafe {
         w.window().bits(0xFF_FFFF)
     });
+    */
 
+    /* reset value is already 0
     // set the interrupt warning value to zero, since we don't intend to use it
     wwdt.warnint.write(|w| unsafe {
         w.warnint().bits(0x0)
     });
+    */
 
     // Feed the watchdog
     wwdt.feed.write(|w|
@@ -77,18 +81,22 @@ fn main() -> ! {
     hl::sleep_for(1);
 
     // after waiting, protect the timer by setting the right bit
-    wwdt.mod_.write(|w| w.wdprotect().set_bit());
+    //wwdt.mod_.write(|w| w.wdprotect().set_bit());
 
     let mut counter = 0;
 
     loop {
         hprintln!("wwdt loop start!").ok();
-        hprintln!("tv: {:?}", wwdt.tv.read().count().bits()).ok();
+        let tv = wwdt.tv.read().count().bits();
+        hprintln!("tv: {:?}", tv).ok();
         hprintln!("window: {:?}", wwdt.window.read().window().bits()).ok();
 
-        hl::sleep_for(10);
+        hl::sleep_for(1);
         if counter > 4 {
+            hprintln!("no feeding!").ok();
+        } else {
             hprintln!("feeding!").ok();
+            counter += 1;
 
             // Feed the watchdog
             wwdt.feed.write(|w|
@@ -104,10 +112,6 @@ fn main() -> ! {
                         .bits(0x55)
                 }
             );
-
-            counter = 0;
-        } else {
-            counter += 1;
             hprintln!("sleeping more: {}", counter).ok();
         }
     }
