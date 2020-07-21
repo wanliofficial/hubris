@@ -117,6 +117,7 @@ enum Op {
     DisableClock = 2,
     EnterReset = 3,
     LeaveReset = 4,
+    ConfigureWwdt = 5,
 }
 
 #[derive(FromPrimitive)]
@@ -202,6 +203,35 @@ fn main() -> ! {
                         Reg::R1 => clear_bit!(syscon.presetctrl1, pmask),
                         Reg::R2 => clear_bit!(syscon.presetctrl2, pmask),
                     },
+                    Op::ConfigureWwdt => {
+                        // bits 5:0 set the divider amount
+                        // bits 28:6 must be only written zeroes
+                        // bit 29 resets the divider counter
+                        // bit 30 halts the divider counter
+                        // bit 31 is about clock frequency
+
+                        // Release the reset
+                        // disable HALT bit
+                        // and program DIV[5:0]
+
+                        // little endian
+
+                        syscon.wdtclkdiv.write(|w| unsafe {
+                            w.reset().clear_bit()
+                                .halt().clear_bit()
+                                .div().bits(0b11_1111)
+                        });
+
+
+                        // Enable the register interface (WWDT bus clock): set the WWDT bit in the
+                        // AHBCLKCTRL0 register, see Table 55. 
+
+                        syscon.ahbclkctrl0.write(|w| 
+                            w.wwdt().set_bit()
+                        )
+
+                        // enter & leave the reset
+                    }
                 }
 
                 caller.reply(());

@@ -281,6 +281,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "drv-lpc55-wwdt"
+version = "0.1.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-semihosting",
+ "drv-lpc55-syscon-api",
+ "lpc55-pac",
+ "userlib",
+]
+
+[[package]]
 name = "drv-stm32f4-rcc"
 version = "0.1.0"
 dependencies = [

@@ -47,6 +47,14 @@ requires = {flash = 16384, ram = 1024}
 uses = ["syscon", "anactrl", "pmc"]
 start = true
 
+[tasks.wwdt_driver]
+path = "../drv/lpc55-wwdt"
+name = "drv-lpc55-wwdt"
+priority = 2
+requires = {flash = 16384, ram = 1024}
+uses = ["wwdt"]
+start = true
+
 [tasks.gpio_driver]
 path = "../drv/lpc55-gpio"
 name = "drv-lpc55-gpio"
@@ -96,7 +104,7 @@ name = "task-sup"
 features = []
 priority = 5
 requires = {flash = 8192, ram = 512}
-start = true
+start = false
 
 [tasks.sup2]
 path = "../task-sup2"
@@ -104,7 +112,7 @@ name = "task-sup2"
 features = []
 priority = 4
 requires = {flash = 8192, ram = 512}
-start = true
+start = false
 
 [peripherals.syscon]
 address = 0x40000000
@@ -136,4 +144,8 @@ size = 4096
 
 [peripherals.flexcomm8]
 address = 0x4009F000
+size = 4096
+
+[peripherals.wwdt]
+address = 0x4000C000
 size = 4096
