@@ -8,6 +8,7 @@ members = [
 
     "abi",
     "demo",
+    "demo-100fx",
     "demo-stm32h7",
     "gemini-bu",
     "gemini-bu-rot",
