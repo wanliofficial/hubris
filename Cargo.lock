@@ -1653,6 +1653,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36474e732d1affd3a6ed582781b3683df3d0563714c59c39591e8ff707cf078e"
 
 [[package]]
+name = "task-blink-status"
+version = "0.1.0"
+dependencies = [
+ "cortex-m 0.6.7",
+ "drv-user-leds-api",
+ "userlib",
+]
+
+[[package]]
 name = "task-i2c"
 version = "0.1.0"
 dependencies = [

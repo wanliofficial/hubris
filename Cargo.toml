@@ -29,6 +29,7 @@ members = [
     "task-spd",
     "task-spi",
     "task-thermal",
+    "task-blink-status",
 
     "drv/stm32f4-rcc",
     "drv/stm32f4-usart",

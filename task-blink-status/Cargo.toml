@@ -1,0 +1,25 @@
+[package]
+name = "task-blink-status"
+version = "0.1.0"
+authors = ["Arjen Roodselaar <arjen@oxide.computer>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cortex-m = "0.6.3"
+userlib = {path = "../userlib"}
+drv-user-leds-api = {path = "../drv/user-leds-api"}
+
+[features]
+default = ["standalone"]
+standalone = []
+
+# a target for `cargo xtask check`
+[package.metadata.build]
+target = "thumbv7em-none-eabihf"
+
+[[bin]]
+name = "task-blink-status"
+test = false
+bench = false
