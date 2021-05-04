@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-use ringbuf::*;
 use userlib::*;
 
 pub mod ksz8463;
@@ -16,10 +15,13 @@ fn main() -> ! {
     let spi = TaskId::for_index_and_gen(SPI as usize, Generation::default());
 
     loop {
-        ksz8463::read(spi, ksz8463::Register::CIDER).unwrap();
-        ksz8463::write(spi, ksz8463::Register::CIDER, 1).unwrap();
+        if ksz8463::enabled(spi).unwrap() {
+            ksz8463::disable(spi).unwrap();
+        } else {
+            ksz8463::enable(spi).unwrap();
+        }
         ksz8463::read(spi, ksz8463::Register::CIDER).unwrap();
 
-        hl::sleep_for(1000);
+        hl::sleep_for(2000);
     }
 }

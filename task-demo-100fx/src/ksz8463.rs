@@ -21,6 +21,11 @@ pub enum Register {
     SGCR1 = register_offset(0x002),
     SGCR2 = register_offset(0x004),
     SGCR3 = register_offset(0x006),
+    SGCR6 = register_offset(0x00c),
+    SGCR7 = register_offset(0x00e),
+    MACAR1 = register_offset(0x010),
+    MACAR2 = register_offset(0x012),
+    MACAR3 = register_offset(0x014),
 }
 
 #[derive(Copy, Clone, PartialEq)]
@@ -67,7 +72,9 @@ pub fn read(spi: TaskId, r: Register) -> Result<u16, ResponseCode> {
 
 pub fn write(spi: TaskId, r: Register, v: u16) -> Result<(), ResponseCode> {
     let cmd = r as u16 | 0x8000; // Set MSB to indicate write.
-    let request: [u8; 4] = ((cmd as u32) << 16 | (v as u32)).to_be_bytes();
+    // The command is LE but data is BE. Do the shuffle!
+    let request: [u8; 4] =
+        ((cmd as u32) << 16 | (v.to_be() as u32)).to_be_bytes();
 
     ringbuf_entry!(RegisterAccess::Write(r));
     ringbuf_entry!(RegisterAccess::Data(v));
@@ -83,4 +90,18 @@ pub fn write(spi: TaskId, r: Register, v: u16) -> Result<(), ResponseCode> {
         }
         _ => panic!("invalid response"),
     }
+}
+
+pub fn enabled(spi: TaskId) -> Result<bool, ResponseCode> {
+    Ok(read(spi, Register::CIDER)? & 0x1 != 0)
+}
+
+pub fn enable(spi: TaskId) -> Result<(), ResponseCode> {
+    write(spi, Register::CIDER, 1)?;
+    Ok(())
+}
+
+pub fn disable(spi: TaskId) -> Result<(), ResponseCode> {
+    write(spi, Register::CIDER, 0)?;
+    Ok(())
 }
