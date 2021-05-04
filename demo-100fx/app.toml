@@ -66,19 +66,19 @@ start = true
 path = "../drv/stm32h7-spi-server"
 name = "drv-stm32h7-spi-server"
 priority = 2
-requires = {flash = 16384, ram = 1024}
+requires = {flash = 16384, ram = 2048}
 uses = ["spi2"]
-start = false
-interrupts = {84 = 1}
+start = true
+interrupts = {36 = 1}
 stacksize = 1000
 
-[tasks.spi]
-path = "../task-spi"
-name = "task-spi"
+[tasks.demo_100fx]
+path = "../task-demo-100fx"
+name = "task-demo-100fx"
 features = ["itm"]
 priority = 3
-requires = {flash = 8192, ram = 2048}
-start = false
+requires = {flash = 16384, ram = 2048}
+start = true
 
 [tasks.user_leds]
 path = "../drv/user-leds"

@@ -654,6 +654,7 @@ dependencies = [
  "drv-stm32h7-rcc-api",
  "drv-stm32h7-spi",
  "num-traits",
+ "ringbuf",
  "stm32h7",
  "userlib",
  "zerocopy",
@@ -1659,6 +1660,20 @@ dependencies = [
  "cortex-m 0.6.7",
  "drv-user-leds-api",
  "userlib",
+]
+
+[[package]]
+name = "task-demo-100fx"
+version = "0.1.0"
+dependencies = [
+ "bitfield",
+ "cortex-m 0.6.7",
+ "cortex-m-semihosting",
+ "drv-stm32h7-spi-server",
+ "num-traits",
+ "ringbuf",
+ "userlib",
+ "zerocopy",
 ]
 
 [[package]]

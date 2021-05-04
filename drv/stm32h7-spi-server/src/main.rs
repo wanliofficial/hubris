@@ -19,6 +19,7 @@
 #![no_std]
 #![no_main]
 
+use ringbuf::*;
 use stm32h7::stm32h743 as device;
 use userlib::*;
 
@@ -70,6 +71,18 @@ impl From<ResponseCode> for u32 {
 
 const IRQ_MASK: u32 = 1;
 
+#[derive(Copy, Clone, PartialEq)]
+enum Action {
+    None,
+    Begin,
+    WaitForEnd,
+    End,
+    Send(u8),
+    Receive(u8),
+}
+
+ringbuf!(Action, 16, Action::None);
+
 #[export_name = "main"]
 fn main() -> ! {
     let rcc_driver = rcc_api::Rcc::from(TaskId::for_index_and_gen(
@@ -77,14 +90,14 @@ fn main() -> ! {
         Generation::default(),
     ));
 
-    // SPI4 is the connection from SP -> RoT
-    rcc_driver.enable_clock(rcc_api::Peripheral::Spi4);
-    rcc_driver.leave_reset(rcc_api::Peripheral::Spi4);
+    // SPI2 is the connection from SP -> KSZ8463
+    rcc_driver.enable_clock(rcc_api::Peripheral::Spi2);
+    rcc_driver.leave_reset(rcc_api::Peripheral::Spi2);
 
-    // Manufacture a pointer to SPI4 because the stm32h7 crate won't help us
+    // Manufacture a pointer to SPI2 because the stm32h7 crate won't help us
     // Safety: we're dereferencing a pointer to a guaranteed-valid address of
     // registers.
-    let registers = unsafe { &*device::SPI4::ptr() };
+    let registers = unsafe { &*device::SPI2::ptr() };
 
     let mut spi = spi_core::Spi::from(registers);
 
@@ -104,24 +117,14 @@ fn main() -> ! {
         Generation::default(),
     ));
 
-    // The main connection to RoT
-    // PE2 = SCK
-    // PE4 = CS
-    // PE5 = MISO
-    // PE6 = MOSI
-    //
-    // If you need debugging, the following pins can be configured
-    // PE12 = SCK
-    // PE11 = CS
-    // PE13 = MISO
-    // PE14 = MOSI
-    //
-    // Make sure MISO and MOSI are connected to something when debugging,
-    // otherwise you may get unexpected output.
+    // PI0 = CS
+    // PI1 = SCK
+    // PI2 = MISO
+    // PE3 = MOSI
     gpio_driver
         .configure(
-            gpio_api::Port::E,
-            (1 << 2) | (1 << 4) | (1 << 5) | (1 << 6),
+            gpio_api::Port::I,
+            (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3),
             gpio_api::Mode::Alternate,
             gpio_api::OutputType::PushPull,
             gpio_api::Speed::High,
@@ -252,6 +255,7 @@ fn main() -> ! {
                     // point we _have_ to move the specified number of bytes
                     // through (or explicitly cancel, but we don't).
                     spi.start();
+                    ringbuf_entry!(Action::Begin);
 
                     // As you might expect, we will work from byte 0 to the end
                     // of each buffer. There are two complications:
@@ -292,6 +296,8 @@ fn main() -> ! {
                                 spi.send8(byte);
                                 *tx_pos += 1;
 
+                                ringbuf_entry!(Action::Send(byte));
+
                                 // If we have _just_ finished...
                                 if *tx_pos == xfer_len {
                                     // We will finish transmitting well before
@@ -309,11 +315,13 @@ fn main() -> ! {
                         if let Some((rx_data, rx_pos)) = &mut rx {
                             if spi.can_rx_byte() {
                                 // Transfer byte from RX FIFO to caller.
-                                let r = spi.recv8();
+                                let byte = spi.recv8();
                                 rx_data
-                                    .write_at(*rx_pos, r)
+                                    .write_at(*rx_pos, byte)
                                     .ok_or(ResponseCode::BadArg)?;
                                 *rx_pos += 1;
+
+                                ringbuf_entry!(Action::Receive(byte));
 
                                 if *rx_pos == xfer_len {
                                     rx = None;
@@ -335,6 +343,8 @@ fn main() -> ! {
 
                     // Wait for the final EOT interrupt to ensure we're really
                     // done before returning to the client
+                    ringbuf_entry!(Action::WaitForEnd);
+
                     loop {
                         sys_irq_control(IRQ_MASK, true);
                         sys_recv_closed(&mut [], IRQ_MASK, TaskId::KERNEL)
@@ -349,6 +359,7 @@ fn main() -> ! {
                     // Wrap up the transfer and restore things to a reasonable
                     // state.
                     spi.end();
+                    ringbuf_entry!(Action::End);
 
                     // As we're done with the borrows, we can now resume the
                     // caller.
