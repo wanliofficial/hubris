@@ -123,6 +123,13 @@ fn system_init() {
             .set_bit()
     });
 
+    // Set up SYSCFG selections so drivers don't have to.
+    p.RCC.apb4enr.modify(|_, w| w.syscfgen().enabled());
+    cortex_m::asm::dmb();
+
+    // Ethernet is on RMII, not MII.
+    p.SYSCFG.pmcr.modify(|_, w| unsafe { w.epis().bits(0b100) });
+
     // Turn on CPU I/D caches to improve performance at the higher clock speeds
     // we're about to enable.
     cp.SCB.enable_icache();

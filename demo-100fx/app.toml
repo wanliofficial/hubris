@@ -37,6 +37,15 @@ read = true
 write = true
 execute = false  # let's assume XN until proven otherwise
 
+# Network buffers are placed in sram1, which is directly accessible by the
+# Ethernet MAC.
+[outputs.sram1]
+address = 0x30000000
+size = 0x20000
+read = true
+write = true
+dma = true
+
 [tasks.jefe]
 path = "../task-jefe"
 name = "task-jefe"
@@ -71,6 +80,17 @@ uses = ["spi2"]
 start = true
 interrupts = {36 = 1}
 stacksize = 1000
+
+[tasks.ethernet]
+path = "../drv/stm32h7-eth"
+name = "drv-stm32h7-eth"
+features = ["h743", "itm"]
+priority = 2
+requires = {flash = 32768, ram = 2048, sram1 = 32768}
+sections = {eth_bulk = "sram1"}
+uses = ["eth", "eth_dma"]
+start = true
+interrupts = {61 = 1}
 
 [tasks.demo_100fx]
 path = "../task-demo-100fx"
@@ -127,3 +147,11 @@ size = 1024
 [peripherals.spi2]
 address = 0x40003800
 size = 1024
+
+[peripherals.eth]
+address = 0x40028000
+size = 0x1000
+
+[peripherals.eth_dma]
+address = 0x40029000
+size = 0x400

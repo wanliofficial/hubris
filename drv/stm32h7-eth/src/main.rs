@@ -5,9 +5,9 @@
 #![feature(min_const_generics)]
 
 mod desc;
-mod ring;
-mod rx_ring;
-mod tx_ring;
+//mod ring;
+//mod rx_ring;
+//mod tx_ring;
 
 use core::mem::MaybeUninit;
 use core::sync::atomic::{AtomicBool, Ordering};
@@ -57,6 +57,7 @@ fn main() -> ! {
     // configure burst length since the hardware was released, soooo
     ethdma.dmasbmr.reset();
 
+    /*
     // Get a hold of the TX ring.
     let mut tx_ring = get_tx_ring();
     // Record the length MINUS ONE - the docs are wrong
@@ -128,8 +129,10 @@ fn main() -> ! {
     sys_irq_control(IRQ, true);
 
     let mut rx_count = 0;
+    */
 
     loop {
+        /*
         let rm = sys_recv_open(&mut [], TIMER | IRQ);
         if rm.sender == TaskId::KERNEL {
             if rm.operation & TIMER != 0 {
@@ -195,6 +198,17 @@ fn main() -> ! {
             // huh.
             sys_log!("unexpected incoming message to ETH driver");
         }
+        */
+
+        let addr = 0x1c | 0x02;
+
+        let id1 = smi_read(ethmac, addr, 0x02);
+        sys_log!("R(0x02): {:04x}", id1);
+
+        let id2 = smi_read(ethmac, addr, 0x03);
+        sys_log!("R(0x03): {:04x}", id2);
+
+        hl::sleep_for(1000);
     }
 }
 
@@ -224,7 +238,7 @@ fn turn_on_ethernet_controller() {
     rcc.leave_reset_raw(PNUM_MAC).unwrap();
 }
 
-#[cfg(any(feature = "standalone", target_board = "nucleo-h743zi2"))]
+#[cfg(any(feature = "standalone", target_board = "gemini-bu-1"))]
 fn configure_ethernet_pins() {
     // This board's mapping:
     //
@@ -232,13 +246,12 @@ fn configure_ethernet_pins() {
     // MDIO             PA2
     // RMII RX DV       PA7
     //
-    // RMII TXD1        PB13
-    //
     // MDC              PC1
     // RMII RXD0        PC4
     // RMII RXD1        PC5
     //
     // RMII TX EN       PG11
+    // RMII TXD1        PG12
     // RMII TXD0        PG13
     use drv_stm32h7_gpio_api::*;
 
@@ -258,16 +271,6 @@ fn configure_ethernet_pins() {
     )
     .unwrap();
     gpio.configure(
-        Port::B,
-        1 << 13,
-        Mode::Alternate,
-        OutputType::PushPull,
-        Speed::VeryHigh,
-        Pull::None,
-        Alternate::AF11,
-    )
-    .unwrap();
-    gpio.configure(
         Port::C,
         (1 << 1) | (1 << 4) | (1 << 5),
         Mode::Alternate,
@@ -279,7 +282,7 @@ fn configure_ethernet_pins() {
     .unwrap();
     gpio.configure(
         Port::G,
-        (1 << 11) | (1 << 13),
+        (1 << 11) | (1 << 12) | (1 << 13),
         Mode::Alternate,
         OutputType::PushPull,
         Speed::VeryHigh,
@@ -332,6 +335,7 @@ fn smi_read(
     ethmac.macmdiodr.read().md().bits()
 }
 
+/*
 const NTX: usize = 4;
 
 fn get_tx_ring() -> tx_ring::TxRing {
@@ -378,6 +382,7 @@ fn get_rx_ring() -> rx_ring::RxRing {
         unsafe { core::mem::transmute(&mut BTABLE) };
     rx_ring::RxRing::new(dtable, btable)
 }
+*/
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Speed {
