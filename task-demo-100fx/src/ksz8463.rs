@@ -40,7 +40,8 @@ enum RegisterAccess {
 ringbuf!(RegisterAccess, 16, RegisterAccess::None);
 
 pub fn read(spi: TaskId, r: Register) -> Result<u16, ResponseCode> {
-    let request: [u8; 4] = ((r as u32) << 16).to_be_bytes();
+    let cmd = (r as u16).to_be_bytes();
+    let request = [cmd[0], cmd[1], 0, 0];
     let mut response: [u8; 4] = [0; 4];
 
     ringbuf_entry!(RegisterAccess::Read(r));
@@ -71,10 +72,9 @@ pub fn read(spi: TaskId, r: Register) -> Result<u16, ResponseCode> {
 }
 
 pub fn write(spi: TaskId, r: Register, v: u16) -> Result<(), ResponseCode> {
-    let cmd = r as u16 | 0x8000; // Set MSB to indicate write.
-    // The command is LE but data is BE. Do the shuffle!
-    let request: [u8; 4] =
-        ((cmd as u32) << 16 | (v.to_be() as u32)).to_be_bytes();
+    let cmd = (r as u16 | 0x8000).to_be_bytes(); // Set MSB to indicate write.
+    let data = v.to_le_bytes();
+    let request = [cmd[0], cmd[1], data[0], data[1]];
 
     ringbuf_entry!(RegisterAccess::Write(r));
     ringbuf_entry!(RegisterAccess::Data(v));
