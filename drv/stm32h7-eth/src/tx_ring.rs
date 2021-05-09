@@ -4,7 +4,7 @@ use crate::desc::TxDescriptor;
 use crate::ring::*;
 
 /// Implementation of Ring operations for the `TxDescriptor`.
-impl Descriptor for TxDescriptor {
+unsafe impl Descriptor for TxDescriptor {
     // Not until we transmit something, thanks.
     const INITIALLY_OWNED_BY_HW: bool = false;
 
@@ -78,73 +78,73 @@ impl TxRing {
         // This is here instead of being written inline as an argument to
         // `with_next_buffer` because doing so causes its entire contents to be
         // treated as an `unsafe` block, and I am not amused by this.
-        let body_wrap = |desc: &mut TxDescriptor, buffer: &mut MaybeUninit<[u8; Self::MTU]>| {
-            // Defensively scribble the section of buffer the caller has
-            // requested, to detect errors where they fail to fill it in. We're
-            // being rather paranoid and treating the buffer as poisonous
-            // uninitialized memory, in part to avoid packet-to-packet data
-            // leaks. If this proves to be a performance bottleneck there are
-            // some other options we could consider (though simply passing
-            // references to uninitialized memory is _not_ one of them).
-            let buffer_window = {
-                core::ptr::write_bytes(
-                    buffer.as_mut_ptr() as *mut u8,
-                    0xAA,
-                    size,
-                );
-                // Now that we have initialized it we can safely make a slice
-                // reference.
-                core::slice::from_raw_parts_mut(
-                    buffer.as_mut_ptr() as *mut u8,
-                    size,
-                )
+        let body_wrap =
+            |desc: &mut TxDescriptor,
+             buffer: &mut MaybeUninit<[u8; Self::MTU]>| {
+                // Defensively scribble the section of buffer the caller has
+                // requested, to detect errors where they fail to fill it in. We're
+                // being rather paranoid and treating the buffer as poisonous
+                // uninitialized memory, in part to avoid packet-to-packet data
+                // leaks. If this proves to be a performance bottleneck there are
+                // some other options we could consider (though simply passing
+                // references to uninitialized memory is _not_ one of them).
+                let buffer_window = unsafe {
+                    core::ptr::write_bytes(
+                        buffer.as_mut_ptr() as *mut u8,
+                        0xAA,
+                        size,
+                    );
+                    // Now that we have initialized it we can safely make a slice
+                    // reference.
+                    core::slice::from_raw_parts_mut(
+                        buffer.as_mut_ptr() as *mut u8,
+                        size,
+                    )
+                };
+                // Let the caller fill in the section of the buffer they wanted.
+                let com = body(buffer_window);
+                // Ensure that they are interested in proceeding.
+                if com == Commit::Yes {
+                    // TODO this is where we'd flush the buffer to main memory.
+
+                    // Fill out the transmit descriptor with the actual base address
+                    // of our buffer, and the valid length.
+                    desc.write_buf1_address(buffer_window.as_ptr() as *const ());
+                    desc.write_tdes2({
+                        let mut t = crate::desc::Tdes2(0);
+                        t.set_buf1_len(buffer_window.len() as u32);
+                        t
+                    });
+
+                    desc.write_tdes3({
+                        let mut t = crate::desc::Tdes3(0);
+                        // This is not a context descriptor, it's a data descriptor.
+                        t.set_ctxt(false);
+                        // It is this long:
+                        t.set_fl(size as u32);
+                        // This is both the first and last part of this packet.
+                        t.set_fd(true);
+                        t.set_ld(true);
+                        // We would like both FCS insertion and padding plz.
+                        t.set_cpc(0b00);
+                        // Do not insert the source address. (TODO this might be
+                        // useful).
+                        t.set_saic(0b00);
+                        // Do not use TCP segmentation offload.
+                        t.set_tse(false);
+                        // Don't do any IP checksum insertion (TODO)
+                        t.set_cic(0b00);
+                        t
+                    });
+                    // Unsafe to touch desc now. Communicate that to the compiler.
+                    drop(desc);
+                }
+                com
             };
-            // Let the caller fill in the section of the buffer they wanted.
-            let com = body(buffer_window);
-            // Ensure that they are interested in proceeding.
-            if com == Commit::Yes {
-                // TODO this is where we'd flush the buffer to main memory.
-
-                // Fill out the transmit descriptor with the actual base address
-                // of our buffer, and the valid length.
-                desc.write_buf1_address(buffer_window.as_ptr() as *const ());
-                desc.write_tdes2({
-                    let mut t = crate::desc::Tdes2(0);
-                    t.set_buf1_len(buffer_window.len() as u32);
-                    t
-                });
-
-                desc.write_tdes3({
-                    let mut t = crate::desc::Tdes3(0);
-                    // This is not a context descriptor, it's a data descriptor.
-                    t.set_ctxt(false);
-                    // It is this long:
-                    t.set_fl(size as u32);
-                    // This is both the first and last part of this packet.
-                    t.set_fd(true);
-                    t.set_ld(true);
-                    // We would like both FCS insertion and padding plz.
-                    t.set_cpc(0b00);
-                    // Do not insert the source address. (TODO this might be
-                    // useful).
-                    t.set_saic(0b00);
-                    // Do not use TCP segmentation offload.
-                    t.set_tse(false);
-                    // Don't do any IP checksum insertion (TODO)
-                    t.set_cic(0b00);
-                    t
-                });
-                // Unsafe to touch desc now. Communicate that to the compiler.
-                drop(desc);
-            }
-            com
-        };
 
         // Safety: `body` does not set the descriptor OWN bit and thus fulfills
         // the conditions for `with_next_buffer`.
-        unsafe {
-            self.0.with_next_buffer(body_wrap)
-        }
+        unsafe { self.0.with_next_buffer(body_wrap) }
     }
 
     pub fn base_ptr(&self) -> *const TxDescriptor {

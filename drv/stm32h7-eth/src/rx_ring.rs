@@ -1,10 +1,10 @@
 use core::mem::MaybeUninit;
 
-use crate::ring::*;
 use crate::desc::RxDescriptor;
+use crate::ring::*;
 
 /// Implementation of the Ring-related operations for the `RxDescriptor`.
-impl Descriptor for RxDescriptor {
+unsafe impl Descriptor for RxDescriptor {
     const INITIALLY_OWNED_BY_HW: bool = true;
 
     fn initial_state(buffer: *mut u8, len: usize) -> Self {
@@ -103,7 +103,10 @@ impl RxRing {
                     let len = status.pl() as usize;
                     // We must assume it is correct.
                     let buffer_window = unsafe {
-                        core::slice::from_raw_parts(buffer.as_ptr() as *const u8, len)
+                        core::slice::from_raw_parts(
+                            buffer.as_ptr() as *const u8,
+                            len,
+                        )
                     };
                     //userlib::sys_log!("ETH rx packet of {} bytes", len);
 

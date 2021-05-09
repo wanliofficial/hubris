@@ -67,8 +67,8 @@ start = true
 path = "../drv/stm32h7-gpio"
 name = "drv-stm32h7-gpio"
 priority = 2
-requires = {flash = 8192, ram = 1024}
-uses = ["gpios1", "gpios2", "gpios3"]
+requires = {flash = 8192, ram = 2048}
+uses = ["gpioa", "gpioc", "gpiog", "gpioh", "gpioi"]
 start = true
 
 [tasks.spi_driver]
@@ -128,16 +128,24 @@ start = true
 address = 0x58024400
 size = 1024
 
-[peripherals.gpios1]
+[peripherals.gpioa]
 address = 0x58020000
-size = 0x2000
+size = 0x0400
 
-[peripherals.gpios2]
+[peripherals.gpioc]
+address = 0x58020800
+size = 0x0400
+
+[peripherals.gpiog]
+address = 0x58021800
+size = 0x0400
+
+[peripherals.gpioh]
+address = 0x58021C00
+size = 0x0400
+
+[peripherals.gpioi]
 address = 0x58022000
-size = 0x0800
-
-[peripherals.gpios3]
-address = 0x58022800
 size = 0x0400
 
 [peripherals.usart1]

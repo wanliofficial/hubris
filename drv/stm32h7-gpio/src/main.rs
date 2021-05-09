@@ -78,6 +78,7 @@
 use byteorder::LittleEndian;
 use drv_stm32h7_rcc_api::Rcc;
 use stm32h7::stm32h7b3 as device;
+use ringbuf::*;
 use userlib::*;
 use zerocopy::{AsBytes, FromBytes, Unaligned, U16, U32};
 
@@ -89,7 +90,7 @@ enum Op {
     Toggle = 4,
 }
 
-#[derive(FromPrimitive)]
+#[derive(Copy, Clone, PartialEq, FromPrimitive)]
 enum Port {
     A = 0,
     B = 1,
@@ -144,6 +145,16 @@ const RCC: Task = Task::rcc_driver;
 // a kernel.
 #[cfg(feature = "standalone")]
 const RCC: Task = Task::anonymous;
+
+#[derive(Copy, Clone, PartialEq)]
+enum RequestEvents {
+    None,
+    Configure(Port, u16, u16),
+    SetReset(Port, u32),
+    Toggle(Port, u16),
+}
+
+ringbuf!(RequestEvents, 16, RequestEvents::None);
 
 #[export_name = "main"]
 fn main() -> ! {
@@ -238,6 +249,7 @@ fn main() -> ! {
                                     | (af_val * lsbs_4h),
                             )
                         });
+                        ringbuf_entry!(RequestEvents::Configure(port, msg.pins.get(), atts));
                         caller.reply(());
                     }
                     Op::SetReset => {
@@ -250,6 +262,7 @@ fn main() -> ! {
 
                         reg.bsrr
                             .write(|w| unsafe { w.bits(msg.set_reset.get()) });
+                        ringbuf_entry!(RequestEvents::SetReset(port, msg.set_reset.get()));
                         caller.reply(());
                     }
                     Op::ReadInput => {
