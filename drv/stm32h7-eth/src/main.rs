@@ -7,11 +7,8 @@
 pub mod mdio;
 pub mod vsc8552_regs;
 
-use drv_stm32h7_gpio_api::*;
 use ringbuf::*;
 use userlib::*;
-
-use mdio::Controller;
 
 #[cfg(feature = "h743")]
 use stm32h7::stm32h743 as device;
@@ -69,6 +66,7 @@ fn main() -> ! {
     ethdma.dmasbmr.reset();
 
     let mut mdio = MdioController::new();
+    let mut port = vsc8552_regs::Port::new(&mut mdio, PHY0);
 
     // Configure the PHY in "QSGMII/SGMII MAC-to-100BASE-FX Link Partner" mode as
     // per 3.1.2 and 3.20.
@@ -80,8 +78,15 @@ fn main() -> ! {
     // Make sure the PHY is ready, 120ms minimum.
     hl::sleep_for(200);
 
-    mdio.read(PHY0, vsc8552_regs::Main::PHYId1 as u8);
-    mdio.read(PHY0, vsc8552_regs::Main::PHYId2 as u8);
+    port.read(vsc8552_regs::Main::PHYId1 as u8);
+    port.read(vsc8552_regs::Main::PHYId2 as u8);
+    vsc8552_regs::pre_init(&mut port);
+
+    vsc8552_regs::start_mcu(&mut port);
+    vsc8552_regs::execute_mcu_command(
+        &mut port,
+        vsc8552_regs::ProcessorCommands::Nop,
+    );
 
     /*
     activate_register_page(ethmac, PHY0, vsc8552_regs::Pages::G);
@@ -261,12 +266,12 @@ impl MdioController<'_> {
 }
 
 impl mdio::Controller for MdioController<'_> {
-    fn read(&mut self, phy: u8, register: u8) -> u16 {
+    fn read(&mut self, phy: u8, page_address: u8) -> u16 {
         self.mac.macmdioar.modify(|_, w| unsafe {
             w.pa()
                 .bits(phy)
                 .rda()
-                .bits(register)
+                .bits(page_address)
                 .goc()
                 .bits(0b11)
                 .mb()
@@ -277,17 +282,17 @@ impl mdio::Controller for MdioController<'_> {
         }
 
         let v = self.mac.macmdiodr.read().md().bits();
-        ringbuf_entry!(RegisterAccess::Read(phy, register, v));
+        ringbuf_entry!(RegisterAccess::Read(phy, page_address, v));
         v
     }
 
-    fn write(&mut self, phy: u8, register: u8, value: u16) {
+    fn write(&mut self, phy: u8, page_address: u8, value: u16) {
         self.mac.macmdiodr.write(|w| unsafe { w.md().bits(value) });
         self.mac.macmdioar.modify(|_, w| unsafe {
             w.pa()
                 .bits(phy)
                 .rda()
-                .bits(register)
+                .bits(page_address)
                 .goc()
                 .bits(0b01) // ??
                 .mb()
@@ -297,12 +302,18 @@ impl mdio::Controller for MdioController<'_> {
             hl::sleep_for(1);
         }
 
-        ringbuf_entry!(RegisterAccess::Write(phy, register, value));
+        ringbuf_entry!(RegisterAccess::Write(phy, page_address, value));
     }
 
-    fn write_masked(&mut self, phy: u8, register: u8, value: u16, mask: u16) {
-        let v = (self.read(phy, register) & mask) | value;
-        self.write(phy, register, v)
+    fn write_masked(
+        &mut self,
+        phy: u8,
+        page_address: u8,
+        value: u16,
+        mask: u16,
+    ) {
+        let v = (self.read(phy, page_address) & !mask) | (value & mask);
+        self.write(phy, page_address, v)
     }
 }
 
