@@ -80,66 +80,13 @@ fn main() -> ! {
 
     port.read(vsc8552_regs::Main::PHYId1 as u8);
     port.read(vsc8552_regs::Main::PHYId2 as u8);
+
     vsc8552_regs::pre_init(&mut port);
-
-    vsc8552_regs::start_mcu(&mut port);
-    vsc8552_regs::execute_mcu_command(
-        &mut port,
-        vsc8552_regs::ProcessorCommands::Nop,
-    );
-
-    /*
-    activate_register_page(ethmac, PHY0, vsc8552_regs::Pages::G);
-    smi_write(ethmac, PHY0, vsc8552_regs::G::Mcu0 as u8, 0x4018);
-    smi_write(ethmac, PHY0, vsc8552_regs::G::Mcu0 as u8, 0xc018);
-
-    mcu_assert_reset(ethmac, PHY0);
-    */
-
-    /*
-    // Set MAC source to SGMII and fast link fail to port 0.
-    let mut g_19 = vsc8552_regs::MACConfigAndFastLink(0);
-    g_19.set_mac_source(0); // SGMII
-    g_19.set_fast_link_failure_source(0); // Port 0
-
-    smi_write(
-        ethmac,
-        PHY0,
-        vsc8552_regs::G::MACConfigAndFastLink as u8,
-        g_19.0,
-    );
-
-    smi_read(ethmac, PHY0, vsc8552_regs::G::ProcessorCommand as u8);
-    exectute_processor_command(ethmac, PHY0,
-        vsc8552_regs::ProcessorCommands::EnableDualPortMACAsSGMII,
-    );
-    exectute_processor_command(
-        ethmac,
-        PHY0,
-        vsc8552_regs::ProcessorCommands::EnableDualPortMedia100BaseFX,
-    );
-
-    activate_register_page(ethmac, PHY0, vsc8552_regs::Pages::Main);
-
-    // Update Extended PHY Control 1 to match the above and set 100BASE-FX
-    // link partner.
-    let mut main_23 = vsc8552_regs::ExtendedPHYControl1(0);
-    main_23.set_mac_mode_1000base_x(false); // RGMII/SGMII mode
-    main_23.set_media_mode(3); // 100BASE-FX fiber only
-
-    smi_write(
-        ethmac,
-        PHY0,
-        vsc8552_regs::Main::ExtendedPHYControl1 as u8,
-        main_23.0,
-    );
-
-    // Soft reset the PHY to commit all the above.
-    smi_reset_phy(ethmac, PHY0);
-    */
+    vsc8552_regs::init(&mut port);
+    vsc8552_regs::soft_reset(&mut port);
 
     loop {
-        sys_log!("hello!");
+        port.read(vsc8552_regs::Main::ModeStatus as u8);
         hl::sleep_for(1000);
     }
 }

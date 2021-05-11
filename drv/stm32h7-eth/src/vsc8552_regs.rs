@@ -43,7 +43,7 @@ pub enum Pages {
     E1 = 1,
     E2 = 2,
     E3 = 3,
-    G = 8,
+    G = 16,
     Test = 0x2a30,
     TokenRing = 0x52b5,
 }
@@ -531,6 +531,38 @@ pub fn execute_mcu_command<'a>(port: &'a mut Port, cmd: ProcessorCommands) {
     port.write(G::ProcessorCommand as u8, cmd as u16);
 
     while (port.read(G::ProcessorCommand as u8) & 0x8000) != 0 {
+        hl::sleep_for(10);
+    }
+}
+
+pub fn init<'a>(port: &'a mut Port) {
+    port.set_page(Pages::G);
+
+    let mut g_19 = MACConfigAndFastLink(0);
+    g_19.set_mac_source(0); // SGMII
+    g_19.set_fast_link_failure_source(0); // Port 0
+
+    port.write(G::MACConfigAndFastLink as u8, g_19.0);
+
+    execute_mcu_command(port, ProcessorCommands::EnableDualPortMACAsSGMII);
+    execute_mcu_command(port, ProcessorCommands::EnableDualPortMedia100BaseFX);
+
+    port.set_page(Pages::Main);
+
+    // Update Extended PHY Control 1 to match the above and set 100BASE-FX
+    // link partner.
+    let mut main_23 = ExtendedPHYControl1(0);
+    main_23.set_mac_mode_1000base_x(false); // RGMII/SGMII mode
+    main_23.set_media_mode(3); // 100BASE-FX fiber only
+
+    port.write(Main::ExtendedPHYControl1 as u8, main_23.0);
+}
+
+pub fn soft_reset<'a>(port: &'a mut Port) {
+    port.set_page(Pages::Main);
+    port.write_masked(Main::ModeControl as u8, 0x8000, 0x8000);
+
+    while (port.read(Main::ModeControl as u8) & 0x8000) != 0 {
         hl::sleep_for(10);
     }
 }
