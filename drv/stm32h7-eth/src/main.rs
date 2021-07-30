@@ -82,11 +82,14 @@ fn main() -> ! {
     port.read(vsc8552_regs::Main::PHYId2 as u8);
 
     vsc8552_regs::pre_init(&mut port);
-    vsc8552_regs::init(&mut port);
-    vsc8552_regs::soft_reset(&mut port);
+    //vsc8552_regs::init(&mut port);
+    //vsc8552_regs::soft_reset(&mut port);
+
+    //port.set_page(vsc8552_regs::Pages::Main);
 
     loop {
-        port.read(vsc8552_regs::Main::ModeStatus as u8);
+        //port.read(vsc8552_regs::Main::ModeStatus as u8);
+        //port.read(vsc8552_regs::Main::_100baseTxStatusExtension as u8);
         hl::sleep_for(1000);
     }
 }

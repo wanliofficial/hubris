@@ -14,14 +14,15 @@ const SPI: Task = Task::spi_driver;
 fn main() -> ! {
     let spi = TaskId::for_index_and_gen(SPI as usize, Generation::default());
 
-    loop {
-        if ksz8463::enabled(spi).unwrap() {
-            ksz8463::disable(spi).unwrap();
-        } else {
-            ksz8463::enable(spi).unwrap();
-        }
-        ksz8463::read(spi, ksz8463::Register::CIDER).unwrap();
+    ksz8463::enable(spi).unwrap();
+    // Set 100BASE-FX
+    ksz8463::write_masked(spi, ksz8463::Register::CFGR, 0x0, 0xc0);
+    ksz8463::write_masked(spi, ksz8463::Register::DSP_CNTRL_6, 0, 0x2000);
 
-        hl::sleep_for(2000);
+    ksz8463::read(spi, ksz8463::Register::P1MBCR).unwrap();
+
+    loop {
+        ksz8463::read(spi, ksz8463::Register::P1MBSR).unwrap();
+        hl::sleep_for(1000);
     }
 }

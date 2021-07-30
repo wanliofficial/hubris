@@ -26,14 +26,19 @@ pub enum Register {
     MACAR1 = register_offset(0x010),
     MACAR2 = register_offset(0x012),
     MACAR3 = register_offset(0x014),
+
+    P1MBCR = register_offset(0x04c),
+    P1MBSR = register_offset(0x04e),
+
+    CFGR = register_offset(0x0d8),
+    DSP_CNTRL_6 = register_offset(0x734),
 }
 
 #[derive(Copy, Clone, PartialEq)]
 enum RegisterAccess {
     None,
-    Read(Register),
-    Write(Register),
-    Data(u16),
+    Read(Register, u16),
+    Write(Register, u16),
     Error(ResponseCode),
 }
 
@@ -43,8 +48,6 @@ pub fn read(spi: TaskId, r: Register) -> Result<u16, ResponseCode> {
     let cmd = (r as u16).to_be_bytes();
     let request = [cmd[0], cmd[1], 0, 0];
     let mut response: [u8; 4] = [0; 4];
-
-    ringbuf_entry!(RegisterAccess::Read(r));
 
     let (code, _) = sys_send(
         spi,
@@ -60,7 +63,7 @@ pub fn read(spi: TaskId, r: Register) -> Result<u16, ResponseCode> {
     match code {
         0 => {
             let v = u16::from_le_bytes(response[2..].try_into().unwrap());
-            ringbuf_entry!(RegisterAccess::Data(v));
+            ringbuf_entry!(RegisterAccess::Read(r, v));
             Ok(v)
         }
         2 => {
@@ -76,8 +79,7 @@ pub fn write(spi: TaskId, r: Register, v: u16) -> Result<(), ResponseCode> {
     let data = v.to_le_bytes();
     let request = [cmd[0], cmd[1], data[0], data[1]];
 
-    ringbuf_entry!(RegisterAccess::Write(r));
-    ringbuf_entry!(RegisterAccess::Data(v));
+    ringbuf_entry!(RegisterAccess::Write(r, v));
 
     let (code, _) =
         sys_send(spi, 2, &[], &mut [], &[Lease::from(&request as &[u8])]);
@@ -90,6 +92,11 @@ pub fn write(spi: TaskId, r: Register, v: u16) -> Result<(), ResponseCode> {
         }
         _ => panic!("invalid response"),
     }
+}
+
+pub fn write_masked(spi: TaskId, r: Register, v: u16, mask: u16) -> Result<(), ResponseCode> {
+    let _v = (read(spi, r)? & !mask) | (v & mask);
+    write(spi, r, _v)
 }
 
 pub fn enabled(spi: TaskId) -> Result<bool, ResponseCode> {
