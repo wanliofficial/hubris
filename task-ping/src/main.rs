@@ -37,6 +37,8 @@ fn divzero() {
 
 #[export_name = "main"]
 fn main() -> ! {
+    // this isn't real
+    let fake = 0;
     let peer = get_task_id(PEER);
     const PING_OP: u16 = 1;
     const FAULT_EVERY: u32 = 100;
