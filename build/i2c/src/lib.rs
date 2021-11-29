@@ -195,11 +195,8 @@ impl ConfigGenerator {
             //
             for (index, (p, port)) in c.ports.iter().enumerate() {
                 if let Some(name) = &port.name {
-                    match buses.insert(name.clone(), (c.controller, index)) {
-                        Some(_) => {
-                            panic!("i2c bus {} appears twice", name);
-                        }
-                        None => {}
+                    if buses.insert(name.clone(), (c.controller, index)).is_some() {
+                        panic!("i2c bus {} appears twice", name);
                     }
                 }
 
@@ -248,13 +245,13 @@ impl ConfigGenerator {
 
         Self {
             output: String::new(),
-            disposition: disposition,
-            artifact: artifact,
-            controllers: controllers,
-            buses: buses,
-            ports: ports,
-            singletons: singletons,
-            devices: i2c.devices.unwrap_or(Vec::new()),
+            disposition,
+            artifact,
+            controllers,
+            buses,
+            ports,
+            singletons,
+            devices: i2c.devices.unwrap_or_default(),
         }
     }
 
@@ -286,7 +283,7 @@ impl ConfigGenerator {
             self.controllers.len()
         )?;
 
-        if self.controllers.len() > 0 {
+        if !self.controllers.is_empty() {
             writeln!(
                 &mut s,
                 r##"
@@ -622,10 +619,8 @@ impl ConfigGenerator {
                         )
                     }
                 }
-            } else {
-                if let Some(name) = &d.name {
-                    panic!("named device {} is on unnamed bus", name);
-                }
+            } else if let Some(name) = &d.name {
+                panic!("named device {} is on unnamed bus", name);
             }
         }
 
@@ -720,7 +715,7 @@ impl ConfigGenerator {
             if let Some(pmbus) = &d.pmbus {
                 if let Some(rails) = &pmbus.rails {
                     for (index, rail) in rails.iter().enumerate() {
-                        if rail.len() == 0 {
+                        if rail.is_empty() {
                             continue;
                         }
 
