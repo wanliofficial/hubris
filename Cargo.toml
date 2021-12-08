@@ -36,6 +36,7 @@ members = [
     "task/spam2",
     "task/spd",
     "task/thermal",
+    "task/vsc7448",
 
     "drv/stm32fx-rcc",
     "drv/stm32fx-usart",
