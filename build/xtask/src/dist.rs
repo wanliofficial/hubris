@@ -1762,19 +1762,20 @@ fn resolve_task_slots(
             elf::get_endianness(&elf),
         )?;
 
-        let target_task_name = match task_toml.task_slots.get(entry.slot_name).map(|s| s.to_string()).or_else(
-            || if all_tasks_toml.contains_key(entry.slot_name) {
-                Some(entry.slot_name.to_string()) } else { None }) {
-            Some(x) => x,
-            _ => bail!(
+        // Load the target task from the (manually specified) task slots, or
+        // fall back to matching against app task names.
+        let target_task_name = task_toml.task_slots
+            .get(entry.slot_name)
+            .map(|s| s)
+            .or_else(|| all_tasks_toml.get_key_value(entry.slot_name).map(|kv| kv.0))
+            .ok_or_else(|| anyhow!(
                 "Program for task '{}' contains a task_slot named '{}', but it is missing from the app.toml",
                 task_name,
                 entry.slot_name
-            ),
-        };
+            ))?;
 
         let target_task_idx =
-            match all_tasks_toml.get_index_of(&target_task_name) {
+            match all_tasks_toml.get_index_of(target_task_name) {
                 Some(x) => x,
                 _ => bail!(
                     "app.toml sets task '{}' task_slot '{}' to task '{}', but no such task exists in the app.toml",
