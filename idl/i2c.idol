@@ -1,0 +1,39 @@
+// Platform-independent I2C server API
+
+Interface(
+    name: "I2c",
+    ops: {
+        "write_read": (
+            args: {
+                "address": (type: "u8"),
+                "controller": (type: "u8"),
+                "port": (type: "u8"),
+                "segment": (type: "u8"),
+            },
+            leases: {
+                "source": (type: "[u8]", read: true),
+                "sink": (type: "[u8]", write: true),
+            },
+            reply: Result(
+                ok: "usize",
+                err: CLike("ResponseCode"),
+            ),
+        ),
+        "write_read_block": (
+            args: {
+                "address": (type: "u8"),
+                "controller": (type: "u8"),
+                "port": (type: "u8"),
+                "segment": (type: "u8"),
+            },
+            leases: {
+                "source": (type: "[u8]", read: true),
+                "sink": (type: "[u8]", write: true),
+            },
+            reply: Result(
+                ok: "usize",
+                err: CLike("ResponseCode"),
+            ),
+        ),
+    },
+)

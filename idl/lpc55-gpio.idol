@@ -1,0 +1,60 @@
+// LPC55 GPIO IPC API
+
+Interface(
+    name: "Gpio",
+    ops: {
+        "set_direction": (
+            args: {
+                "pin": (type: "u32"),
+                "dir": (type: "u32"),
+            },
+            reply: Result(
+                ok: "()",
+                err: CLike("GpioError"),
+            ),
+            idempotent: true,
+        ),
+        "set_value": (
+            args: {
+                "pin": (type: "u32"),
+                "val": (type: "u32"),
+            },
+            reply: Result(
+                ok: "()",
+                err: CLike("GpioError"),
+            ),
+            idempotent: true,
+        ),
+        "read_value": (
+            args: {
+                "pin": (type: "u32"),
+            },
+            reply: Result(
+                ok: "u8",
+                err: CLike("GpioError"),
+            ),
+            idempotent: true,
+        ),
+        "configure": (
+            args: {
+                "pin": (type: "u32"),
+                "conf": (type: "u32"),
+            },
+            reply: Result(
+                ok: "()",
+                err: CLike("GpioError"),
+            ),
+            idempotent: true,
+        ),
+        "toggle": (
+            args: {
+                "pin": (type: "u32"),
+            },
+            reply: Result(
+                ok: "()",
+                err: CLike("GpioError"),
+            ),
+            idempotent: true,
+        ),
+    },
+)

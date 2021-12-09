@@ -1,0 +1,52 @@
+// STM32H7 GPIO IPC API
+
+Interface(
+    name: "Gpio",
+    ops: {
+        "configure": (
+            args: {
+                "port": (type: "u8"),
+                "pins": (type: "u16"),
+                "packed_attributes": (type: "u16"),
+            },
+            reply: Result(
+                ok: "()",
+                err: CLike("GpioError"),
+            ),
+            idempotent: true,
+        ),
+        "set_reset": (
+            args: {
+                "port": (type: "u8"),
+                "set_pins": (type: "u16"),
+                "reset_pins": (type: "u16"),
+            },
+            reply: Result(
+                ok: "()",
+                err: CLike("GpioError"),
+            ),
+            idempotent: true,
+        ),
+        "read_input": (
+            args: {
+                "port": (type: "u8"),
+            },
+            reply: Result(
+                ok: "u16",
+                err: CLike("GpioError"),
+            ),
+            idempotent: true,
+        ),
+        "toggle": (
+            args: {
+                "port": (type: "u8"),
+                "pins": (type: "u16"),
+            },
+            reply: Result(
+                ok: "()",
+                err: CLike("GpioError"),
+            ),
+            idempotent: true,
+        ),
+    },
+)
